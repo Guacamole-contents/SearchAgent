@@ -17,13 +17,13 @@ def _set_data_mapper(
 
     :return: mongoDB에 저장할 데이터
     """
-    return dict(
-        origin_video_name=origin_video_name,
-        copy_video_name=copy_video_name,
-        is_copy=is_copy,
-        reason=reason,
-        search_date=int(datetime.now().timestamp()),
-    )
+    return {
+        "origin_video_name": origin_video_name,
+        "copy_video_name": copy_video_name,
+        "is_copy": is_copy,
+        "reason": reason,
+        "search_date": int(datetime.now().timestamp()),
+    }
 
 
 def save_result_to_db(data: List[Dict[str, str]]):
@@ -38,15 +38,18 @@ def save_result_to_db(data: List[Dict[str, str]]):
     """
 
     with MongoClient(config.MONGODB_ATLAS_CLUSTER_URI) as client:
-        data = [
-            _set_data_mapper(
-                origin_video_name=origin_video_name,
-                copy_video_name=copy_video_name,
-                is_copy=is_copy,
-                reason=reason,
-            )
-            for origin_video_name, copy_video_name, is_copy, reason in data
-        ]
+        # data = [
+        #     {
+        #         "origin_video_name": origin_video_name,
+        #         "copy_video_name": copy_video_name,
+        #         "is_copy": is_copy,
+        #         "reason": reason,
+        #         "search_date": int(datetime.now().timestamp()),
+        #     }
+        #     for origin_video_name, copy_video_name, is_copy, reason in data
+        # ]
+
+        print(data)
 
         return client[config.DB_NAME][config.COLLECTION_NAME].insert_many(data)
 

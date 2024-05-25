@@ -21,14 +21,22 @@ def generate_prompt(origin_data_metadata: dict, origin_data_comments: list, copy
     template = templateEnv.get_template(path_template)
 
     # 원본 영상 데이터 추출.
-    original_video_title = ""
-    original_video_descriptoin = ""
-    original_comments = []
+    print(origin_data_metadata)
+    print()
+    print(origin_data_comments)
+    print()
+    print(copy_data_metadata)
+    print()
+    print(copy_data_comments)
+
+    original_video_title = origin_data_metadata["Original title"]
+    original_video_descriptoin = origin_data_metadata["Original body text"]
+    original_comments = [x["text"] for x in origin_data_comments]
 
     # 위반 후보 영상 데이터 추출.
-    copy_video_title = ""
-    copy_video_descriptoin = ""
-    copy_comments = []
+    copy_video_title = copy_data_metadata["Original title"]
+    copy_video_descriptoin = copy_data_metadata["Original body text"]
+    copy_comments = [x["text"] for x in copy_data_comments]
 
     # 프롬프트 템플릿에 데이터 적용.
     prompt = template.render(original_video_title=original_video_title,

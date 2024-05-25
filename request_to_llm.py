@@ -1,10 +1,10 @@
 from langchain_community.chat_models.friendli import ChatFriendli
-from config import FRIENDLI_TOKEN
+from config import config
 
 
 def request_to_llm(prompt: str):
     model = ChatFriendli(
-        model="meta-llama-3-70b-instruct", friendli_token=FRIENDLI_TOKEN
+        model="meta-llama-3-70b-instruct", friendli_token=config.FRIENDLI_TOKEN
     )
     return model.invoke(prompt).content
 

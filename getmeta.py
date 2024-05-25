@@ -13,6 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from googleapiclient.errors import HttpError
+from tqdm import tqdm
 
 import time
 
@@ -84,49 +85,45 @@ def parse_arguments():
 
 #     return comments
 def get_video_comments(api_key, video_id: str) -> list:
-    from tqdm import tqdm
     """YouTube 영상 ID를 이용하여 해당 영상의 댓글 목록을 가져오는 함수.
+    likeCount 기준으로 내림차순 정렬 후 상위 4개 댓글을 반환합니다.
 
     Args:
         api_key (str): 사용자가 발급받은 API 키.
         video_id (str): YouTube 영상 코드.
 
     Returns:
-        list: 지정 영상의 댓글 목록.
+        list: 지정 영상의 상위 4개 댓글 목록.
     """
 
     comments = []
-    api_obj = build('youtube', 'v3', developerKey=os.getenv("YT_KEY"))
+    api_obj = build('youtube', 'v3', developerKey=api_key)
     response = api_obj.commentThreads().list(
         part='snippet,replies', videoId=video_id, maxResults=100).execute()
 
     while response:
         for item in tqdm(response['items']):
             try:
-                # 댓글을 추가합니다.
                 comment = item['snippet']['topLevelComment']['snippet']
-                comments.append([
-                    comment.get('textDisplay', ''),
-                    comment.get('authorDisplayName', ''),
-                    comment.get('publishedAt', ''),
-                    comment.get('likeCount', 0)
-                ])
-                
-                # 답글이 있는 경우, 답글도 추가합니다.
+                comments.append({
+                    'text': comment.get('textDisplay', ''),
+                    'author': comment.get('authorDisplayName', ''),
+                    'publishedAt': comment.get('publishedAt', ''),
+                    'likeCount': comment.get('likeCount', 0)
+                })
+
                 if item['snippet']['totalReplyCount'] > 0:
                     for reply_item in item['replies']['comments']:
                         reply = reply_item['snippet']
-                        comments.append([
-                            reply.get('textDisplay', ''),
-                            reply.get('authorDisplayName', ''),
-                            reply.get('publishedAt', ''),
-                            reply.get('likeCount', 0)
-                        ])
+                        comments.append({
+                            'text': reply.get('textDisplay', ''),
+                            'author': reply.get('authorDisplayName', ''),
+                            'publishedAt': reply.get('publishedAt', ''),
+                            'likeCount': reply.get('likeCount', 0)
+                        })
             except KeyError:
-                # 만약 필요한 키가 없는 경우 이 부분이 실행됩니다.
                 continue
 
-        # 다음 페이지가 있는 경우 다음 페이지를 요청합니다.
         if 'nextPageToken' in response:
             response = api_obj.commentThreads().list(
                 part='snippet,replies', videoId=video_id,
@@ -134,7 +131,10 @@ def get_video_comments(api_key, video_id: str) -> list:
         else:
             break
 
-    return comments
+    # 댓글을 likeCount 기준으로 내림차순 정렬하고 상위 4개만 반환합니다.
+    top_comments = sorted(
+        comments, key=lambda x: x['likeCount'], reverse=True)[:4]
+    return top_comments
 
 def get_video_title(api_key: str, video_id: str) -> str:
     """지정된 YouTube 영상의 제목을 가져오는 함수. 
@@ -320,7 +320,8 @@ def getmata(video_code):
         "Original body text": video_body,
         "Original subscribe": video_subscribe,
         "Original view": video_view_cnt,
-        "Original upload date": video_upload_date
+        "Original upload date": video_upload_date,
+        "Original video code": video_code
     }
     print("result: ", result)
     return result
@@ -427,9 +428,7 @@ def youtube_search(api_key, search_query):
     return videos
 
 
-def makevideopair():
-    args = parse_arguments()
-    video_code = args.code
+def makevideopair(video_code):
     origin_meta_data = getmata(video_code)
     print("meta data 크롤링 완료")
     origin_comment = getcomments(video_code)
@@ -439,7 +438,8 @@ def makevideopair():
     print("claude 검색어 생성 완료  ")
     response_data = json.loads(claude_response)
     result = []
-    generated_query_keywords = [response_data["1"], response_data["2"], response_data["3"], response_data["4"], response_data["5"]]
+    # , response_data["2"], response_data["3"], response_data["4"], response_data["5"]]
+    generated_query_keywords = [response_data["1"]]
     generated_meta_comment_pair_list = []
     for i in range(len(generated_query_keywords)):
         output3 = youtube_search(os.getenv('YT_KEY'), generated_query_keywords[i])
@@ -452,7 +452,3 @@ def makevideopair():
             generated_meta_comment_pair_list.append(generated_meta_comment_pair_one)
         result.append(generated_meta_comment_pair_list)
     return result
-    
-    
-k = makevideopair()
-print(k)
