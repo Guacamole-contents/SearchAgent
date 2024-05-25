@@ -22,7 +22,7 @@ def _set_data_mapper(
         copy_video_name=copy_video_name,
         is_copy=is_copy,
         reason=reason,
-        search_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        search_date=int(datetime.now().timestamp()),
     )
 
 
@@ -56,9 +56,18 @@ if __name__ == "__main__":
 
     data = [
         ("origin1", "copy1", True, "reason1"),
+        ("orisdgin2", "copy2", False, "reason2"),
         ("origin2", "copy2", False, "reason2"),
         ("origin2", "copy2", False, "reason2"),
-        ("origin2", "copy2", False, "reason2"),
+        ("origin2132", "copy2", False, "reason2"),
+        ("origindsf2", "copy2", False, "reason2"),
+        ("origiasdn2", "copy2", False, "reason2"),
+        ("origivbcn2", "copy2", False, "reason2"),
+        ("asd", "copy2", False, "reason2"),
+        ("origvcxivbcn2", "copy2", False, "reason2"),
+        ("origdasivbcn2", "copy2", False, "reason2"),
+        ("origadsivbcn2", "copy2", False, "reason2"),
+        ("origiqwevbcn2", "copy2", False, "reason2"),
     ]
 
     result = save_result_to_db(data)
