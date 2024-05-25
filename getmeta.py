@@ -12,6 +12,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from googleapiclient.errors import HttpError
+
 import time
 
 load_dotenv()
@@ -41,21 +43,19 @@ prompt = """귀하는 GPT-4 아키텍처를 기반으로 OpenAI에 의해 학습
 
 3. '원본 본문 텍스트': 원본 동영상과 함께 게시된 텍스트입니다. 콘텐츠일 수도 있지만 채널에 대한 공지 사항일 수도 있습니다. 
 
-4."원본 해시태그": 원래 동영상 채널 소유자가 동영상을 설명하기 위해 사용한 단어입니다. 
+4. '원본 구독자 수': 오리지널 동영상 채널의 구독자 수입니다. 
 
-5. '원본 구독자 수': 오리지널 동영상 채널의 구독자 수입니다. 
+5. '원본 조회수': 원본 동영상을 시청한 사람의 수입니다. 
 
-6. '원본 조회수': 원본 동영상을 시청한 사람의 수입니다. 
-
-7. '원래 업로드 날짜': 원본 동영상이 업로드된 날짜입니다. 
+6. '원래 업로드 날짜': 원본 동영상이 업로드된 날짜입니다. 
 
 - 총 5개의 검색어를 생성해야 합니다. 
 
 생성하는 방법을 설명하겠습니다. 
 
-1) 우선, '원본 제목'과 '원본 본문'이 겹치는 경우 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'와 '원본 해시태그'가 겹치는 경우에도 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'와 '원본 작성자 이름'이 겹치는 경우에도 문자를 확인할 수 있으므로 검색어에 포함시키는 것이 중요합니다. 
+1) 우선, '원본 제목'과 '원본 본문'이 겹치는 경우 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'가 겹치는 경우에도 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'와 '원본 작성자 이름'이 겹치는 경우에도 문자를 확인할 수 있으므로 검색어에 포함시키는 것이 중요합니다. 
 
-2) 겹치지 않는 경우 '원본 제목'이 가장 중요하고, '원본 크리에이터 이름'이 그 다음, '원본 본문'을 요약하는 단어가 그 다음으로 중요합니다. '원본 해시태그'가 네 번째로 중요합니다. 다섯 가지 검색어는 서로 다르지만 이 오리지널 동영상으로 만들 수 있는 쇼트 동영상을 검색하는 데 필요합니다. 
+2) 겹치지 않는 경우 '원본 제목'이 가장 중요하고, '원본 크리에이터 이름'이 그 다음, '원본 본문'을 요약하는 단어가 그 다음으로 중요합니다 다섯 가지 검색어는 서로 다르지만 이 오리지널 동영상으로 만들 수 있는 쇼트 동영상을 검색하는 데 필요합니다. 
 
 "가장 중요한 것은 한국어 동영상에 초점을 맞추기 때문에 검색어가 한국어로 되어 있어야 한다는 점입니다.
 
@@ -79,80 +79,62 @@ def parse_arguments():
         description='YouTube 영상의 댓글을 이용해, 영상 내 대사를 군집화하여 프롬프트로 반환해줍니다.')
     parser.add_argument('--code', metavar='c', type=str,
                         help='YouTube의 영상코드. (Example: UP2RFQCszdk)')
-    return parser.parse_args()
+    return parser.parse_args(args=["--code", "pnRTzupkJbc"])
 
 
-def get_plot_from_video(model_name: str, video_code: str) -> dict:
-    """YouTube로부터 지정된 영상을 받아 Whisper를 이용해 대사를 가져오는 함수. 
+#     return comments
+def get_video_comments(api_key, video_id: str) -> list:
+    from tqdm import tqdm
+    """YouTube 영상 ID를 이용하여 해당 영상의 댓글 목록을 가져오는 함수.
 
     Args:
-        model_name (str): Whisper에서 사용할 모델명. 
-        video_code (str): YouTube의 영상 코드. 
+        api_key (str): 사용자가 발급받은 API 키.
+        video_id (str): YouTube 영상 코드.
 
     Returns:
-        dict: 지정된 YouTube 영상 내의 대사. 
-    """
-    __download_video(video_code)
-
-    model = whisper.load_model(model_name)
-    result = model.transcribe(f"{video_code}.mp3")
-
-    return result
-
-
-def __download_video(video_code: str):
-    """지정된 YouTube 영상을 다운로드 받는 함수. (내부 라이브러리 용)
-
-    Args:
-        video_code (str): YouTube의 영상 코드. 
-    """
-
-    # 기존의 파일이 있는 경우, 기존 파일 이용.
-    if os.path.exists(f"./{video_code}.mp3"):
-        return
-
-    video_url = f'https://www.youtube.com/watch?v={video_code}'
-    yt = YouTube(video_url)
-    yt.streams.filter(only_audio=True, file_extension='mp4').first().download(
-        filename=video_code + ".mp3")
-
-
-def get_video_comments(api_key: str, video_id: str) -> list:
-    """YouTube 영상 ID를 이용하여 해당 영상의 댓글 목록을 가져오는 함수. 
-
-    Args:
-        api_key (str): 사용자가 발급받은 API 키. 
-        video_id (str): YouTube 영상 코드. 
-
-    Returns:
-        list: 지정 영상의 댓글 목록. 
+        list: 지정 영상의 댓글 목록.
     """
 
     comments = []
-    api_obj = build('youtube', 'v3', developerKey=api_key)
+    api_obj = build('youtube', 'v3', developerKey=os.getenv("YT_KEY"))
     response = api_obj.commentThreads().list(
-        part='snippet,replies', videoId=video_id).execute()
+        part='snippet,replies', videoId=video_id, maxResults=100).execute()
 
     while response:
-        for item in response['items']:
-            comment = item['snippet']['topLevelComment']['snippet']
-            comments.append([comment['textDisplay'], comment['authorDisplayName'],
-                            comment['publishedAt'], comment['likeCount']])
+        for item in tqdm(response['items']):
+            try:
+                # 댓글을 추가합니다.
+                comment = item['snippet']['topLevelComment']['snippet']
+                comments.append([
+                    comment.get('textDisplay', ''),
+                    comment.get('authorDisplayName', ''),
+                    comment.get('publishedAt', ''),
+                    comment.get('likeCount', 0)
+                ])
+                
+                # 답글이 있는 경우, 답글도 추가합니다.
+                if item['snippet']['totalReplyCount'] > 0:
+                    for reply_item in item['replies']['comments']:
+                        reply = reply_item['snippet']
+                        comments.append([
+                            reply.get('textDisplay', ''),
+                            reply.get('authorDisplayName', ''),
+                            reply.get('publishedAt', ''),
+                            reply.get('likeCount', 0)
+                        ])
+            except KeyError:
+                # 만약 필요한 키가 없는 경우 이 부분이 실행됩니다.
+                continue
 
-            if item['snippet']['totalReplyCount'] > 0:
-                for reply_item in item['replies']['comments']:
-                    reply = reply_item['snippet']
-                    comments.append(
-                        [reply['textDisplay'], reply['authorDisplayName'], reply['publishedAt'], reply['likeCount']])
-
+        # 다음 페이지가 있는 경우 다음 페이지를 요청합니다.
         if 'nextPageToken' in response:
-            response = api_obj.commentThreads().list(part='snippet,replies', videoId=video_id,
-                                                     pageToken=response['nextPageToken'], maxResults=100).execute()
+            response = api_obj.commentThreads().list(
+                part='snippet,replies', videoId=video_id,
+                pageToken=response['nextPageToken'], maxResults=100).execute()
         else:
             break
 
     return comments
-
 
 def get_video_title(api_key: str, video_id: str) -> str:
     """지정된 YouTube 영상의 제목을 가져오는 함수. 
@@ -325,12 +307,6 @@ def getmata(video_code):
     video_producer = get_channel_title(youtube_api_key, video_code)
     video_name = get_video_title(youtube_api_key, video_code)
     video_body = get_video_description(youtube_api_key, video_code)
-    
-    video_hashtag = get_video_hashtag(youtube_api_key, video_code)
-    str_video_hashtag = ""
-    for tag in video_hashtag:
-        str_video_hashtag += "#" + tag + " "
-    video_hashtag = str_video_hashtag
 
     channel_id = get_channel_id(youtube_api_key, video_code)
     video_subscribe = get_channel_subscribers(youtube_api_key, channel_id)
@@ -342,7 +318,6 @@ def getmata(video_code):
         "Original creator name": video_producer,
         "Original title": video_name,
         "Original body text": video_body,
-        "Original hashtag": video_hashtag,
         "Original subscribe": video_subscribe,
         "Original view": video_view_cnt,
         "Original upload date": video_upload_date
@@ -363,12 +338,6 @@ def getmataandcomments(video_code):
     video_body = get_video_description(youtube_api_key, video_code)
     video_comment = get_video_comments(youtube_api_key, video_code)
     
-    video_hashtag = get_video_hashtag(youtube_api_key, video_code)
-    str_video_hashtag = ""
-    for tag in video_hashtag:
-        str_video_hashtag += "#" + tag + " "
-    video_hashtag = str_video_hashtag
-
     channel_id = get_channel_id(youtube_api_key, video_code)
     video_subscribe = get_channel_subscribers(youtube_api_key, channel_id)
     
@@ -379,7 +348,6 @@ def getmataandcomments(video_code):
         "Original creator name": video_producer,
         "Original title": video_name,
         "Original body text": video_body,
-        "Original hashtag": video_hashtag,
         "Original subscribe": video_subscribe,
         "Original view": video_view_cnt,
         "Original upload date": video_upload_date
@@ -387,6 +355,16 @@ def getmataandcomments(video_code):
     comment = video_comment
     new_result = {"result": result, "comment": comment}
     return new_result
+def getcomments(video_code):
+    # YouTube API 접속을 위한 API Key 환경변수 가져오기.
+    youtube_api_key = os.getenv("YT_KEY")
+    if youtube_api_key == None:
+        print("YouTube API 사용을 위한 키를 환경변수 `YT_KEY`로 지정 후 다시 실행시켜 주세요. ")
+        exit(1)
+    video_comment = get_video_comments(youtube_api_key, video_code)
+    
+    return video_comment
+
 
 def claude(input_file):
     response = query_anthropic(input_file)
@@ -427,30 +405,54 @@ def fetch_top_video_codes_from_search_results(search_url):
     driver.quit()  # 브라우저 종료
     
     return video_codes
+def youtube_search(api_key, search_query):
+    youtube = build('youtube', 'v3', developerKey=api_key)
+    
+    # search.list 메소드를 이용하여 YouTube 검색 수행
+    search_response = youtube.search().list(
+        q=search_query,        # 검색어
+        part='id,snippet',     # 가져올 데이터
+        maxResults=5          # 최대 결과 수
+    ).execute()
 
-# 예제 검색 URL
-search_url = 'https://www.youtube.com/results?search_query=iPad+Pro+advertisement'
-video_codes = fetch_top_video_codes_from_search_results(search_url)
-print(video_codes)
+    videos = []
+    # 검색 결과에서 동영상 ID 및 제목 추출
+    for search_result in search_response.get('items', []):
+        if search_result['id']['kind'] == 'youtube#video':
+            videos.append({
+                'id': search_result['id']['videoId'],
+                'title': search_result['snippet']['title']
+            })
+
+    return videos
 
 
-
-
-if __name__ == "__main__":
+def makevideopair():
     args = parse_arguments()
     video_code = args.code
-    meta_data = getmata(video_code)
-    input_prompt = prompt + str(meta_data)
+    origin_meta_data = getmata(video_code)
+    print("meta data 크롤링 완료")
+    origin_comment = getcomments(video_code)
+    print("comments 크롤링 완료")
+    input_prompt = prompt + str(origin_meta_data)
     claude_response = claude(input_prompt)
+    print("claude 검색어 생성 완료  ")
     response_data = json.loads(claude_response)
-    outputlist = [response_data["1"], response_data["2"], response_data["3"], response_data["4"], response_data["5"]]
-    generated_link = generate_youtube_links(outputlist)
-    # print("generated_link: ", generated_link)
-    output3 = fetch_top_video_codes_from_search_results(generated_link[0])
-    print(output3)
-    newmeta=meta_data(output3)
-    print("newmeta: ", newmeta)
-    # complete_data = getmataandcomments(video_code)
-    # print(complete_data)
+    result = []
+    generated_query_keywords = [response_data["1"], response_data["2"], response_data["3"], response_data["4"], response_data["5"]]
+    generated_meta_comment_pair_list = []
+    for i in range(len(generated_query_keywords)):
+        output3 = youtube_search(os.getenv('YT_KEY'), generated_query_keywords[i])
+        violate_meta_list = [getmata(str(output3[k]["id"])) for k in range(len(output3))]
+        violate_comment_list = [getcomments(str(output3[k]["id"])) for k in range(len(output3))]
+        print("len(violate_meta_list)",len(violate_meta_list))
+        
+        for j in range(len(violate_meta_list)):
+            generated_meta_comment_pair_one = {"origin_meta": origin_meta_data, "origin_comment": origin_comment, "violate_meta": violate_meta_list[j], "violate_comment": violate_comment_list[j]}
+            generated_meta_comment_pair_list.append(generated_meta_comment_pair_one)
+        result.append(generated_meta_comment_pair_list)
+    return result
     
     
+k = makevideopair()
+print(k)
