@@ -1,0 +1,63 @@
+Below is information about the two videos.
+Given the information, determine whether the video in MV2 is a derivative of MV1.
+The following guidelines should be followed when outputting
+1. The output is in JSON format.
+2. The judged result is displayed in “is_copy” as True or False.
+3. Write a reason why the video should be included, including a person or character in the “reason” field.
+4. The example is as follows
+```
+{
+	“is_copy”: true,
+	“reason”
+}
+```
+5. Do not print anything other than the information specified above.
+Below is information about the two videos.
+“MV1”: {
+	“title”: “[SUB] :불:충격 실화:불: 피아노 치는 김민정 실존:느낌표:️ l EP.28 l 조현아의 목요일 밤 l 윈터 에스파 조현아“,
+	“description”: “:반짝임:익스클루시브 하이퀄리티 프리미엄 어반 원앤온리 고품격 뮤직 토크쇼! :반짝임:
+					:쾅:에스파는 나야:쾅: 둘이 될 수 없어:사랑해_수신호:
+					Next Level 아니 :반짝임:어나더레벨:반짝임:
+					예능 전투력:총: 무장하고 온 광야의 딸
+					:눈송이:에스파 윈터:눈송이:
+					MBTI :쾅:JJJJ:쾅: 최강 세계관의 만남:얼굴에_주먹:
+					뉴질랜드 자연인 성대부심 부리고 간
+					토종 한국인 아머멘터 윈터가
+					자비없이 훅 들어온다:비명을_지르는_고양이:
+					다들 정신 체리:체리:
+					윈터 예능감 넘치는 거 인정?! 인정:+1::+1:
+					윈며들고 조며드는 목요일밤 놀러오세요:쾅:
+					----------------------------------------------
+					[그린몬스터 헐리우드 48시간]
+					맛있는 음식 먹은 후에는?
+					가볍게 비울 시간! 헐리우드 48시간으로 리셋해보세요!
+					:흰색_확인_표시:제품
+					헐리우드 48시간 오리지날 :  https://bit.ly/47s0sxT
+					물 없이 바로 마시는 헐리우드 48시간 : https://bit.ly/3OBOLw7
+					:흰색_확인_표시:가까운 올리브영에서 헐리우드 48시간을 할인된 가격에 만나보세요!
+					#헐리우드48시간 #조현아의목요일밤 #조현아 #윈터 #에스파 #유료광고포함
+					----------------------------------------------
+					:생각하는_얼굴:스몰고민 세미고민 미들고민 빅고민! 고민을 음악으로 만들어주는 그녀로부터의 초대:높은음자리표:
+					 :음표2: 매주 목요일 오후 7시 업로드
+					:보름달: CONTACT | everydayisthursdaynight@gmail.com
+					----------------------------------------------
+					CP l 김광수
+					PD l 민다정 김미연 이해인
+					작가 l 주기쁨 김지영 박은주
+					D.O.P l 김시연 (스탠바이)”
+	“comments”: [
+		“되게 내성적인데 의외로 토크도 잘하고 본업도 ㅈㄴ 잘하는데 뭐 할때마다 화제성 오지는거 보면 윈터 오래갈거같다 ㄹㅇ“,
+		“와...윈터 진짜 요정같이 생겼다ㄷ...졸라게 예쁘네.... 왜 박명수가 아이돌 실물 1위로 뽑은지 알겠음ㅋ쿠ㅜ“,
+		“윈터 처음엔 조금 낯가리는 것 같았는데 공감대 형성되니까 신나서 목소리 높아지고 꺄르르 웃는 거 너무 귀엽다ㅋㅋ“,
+		“윈터 미모가 그냥... 할말이 없는 인형임”
+	]
+}
+“MV2": {
+	“title”: “피아노 치는 김윈터 실존:얼굴에_주먹:”,
+	“comments”: [
+		“윈터 로맨스 드라마 영화 여주같다..“,
+		“둘이 사랑에 빠지것어..“,
+		“자매같네“,
+		“조현아가 영재네요”
+	]
+}
