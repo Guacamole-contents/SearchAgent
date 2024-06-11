@@ -5,7 +5,7 @@ import os
 import urllib.parse
 from pytube import YouTube
 from googleapiclient.discovery import build
-import anthropic
+import pickle
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -15,60 +15,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 from googleapiclient.errors import HttpError
 from tqdm import tqdm
 
+from request_to_llm import request_to_gpt35
+
 import time
 
 load_dotenv()
-api_key = os.getenv('anthropic_API_KEY')
-
-def query_anthropic(input_content):
-    client = anthropic.Anthropic(api_key=api_key)
-    message = client.messages.create(
-        model="claude-3-opus-20240229",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": input_content}]
-    )
-    return message.content[0].text
 
 
-prompt = """귀하는 GPT-4 아키텍처를 기반으로 OpenAI에 의해 학습된 대규모 언어 모델인 ChatGPT입니다.
-
-귀하의 임무는 당사의 동영상을 침해하는 동영상을 찾기 위한 검색어를 생성하는 것입니다.
-
-검색어를 생성하는 방법은 다음과 같습니다. 
-
-- 저희가 제공하는 메타데이터는 7개의 키가 있는 JSON 형식이며, 각 키에는 다음 값이 포함되어 있습니다. 
-
-1. '원래 크리에이터 이름': 원본 동영상을 게시한 채널의 이름입니다. 
-
-2. '원본 제목': 원본 동영상의 제목입니다.
-
-3. '원본 본문 텍스트': 원본 동영상과 함께 게시된 텍스트입니다. 콘텐츠일 수도 있지만 채널에 대한 공지 사항일 수도 있습니다. 
-
-4. '원본 구독자 수': 오리지널 동영상 채널의 구독자 수입니다. 
-
-5. '원본 조회수': 원본 동영상을 시청한 사람의 수입니다. 
-
-6. '원래 업로드 날짜': 원본 동영상이 업로드된 날짜입니다. 
-
-- 총 5개의 검색어를 생성해야 합니다. 
-
-생성하는 방법을 설명하겠습니다. 
-
-1) 우선, '원본 제목'과 '원본 본문'이 겹치는 경우 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'가 겹치는 경우에도 검색어에 포함시키는 것이 중요합니다. '원본 본문 텍스트'와 '원본 작성자 이름'이 겹치는 경우에도 문자를 확인할 수 있으므로 검색어에 포함시키는 것이 중요합니다. 
-
-2) 겹치지 않는 경우 '원본 제목'이 가장 중요하고, '원본 크리에이터 이름'이 그 다음, '원본 본문'을 요약하는 단어가 그 다음으로 중요합니다 다섯 가지 검색어는 서로 다르지만 이 오리지널 동영상으로 만들 수 있는 쇼트 동영상을 검색하는 데 필요합니다. 
-
-"가장 중요한 것은 한국어 동영상에 초점을 맞추기 때문에 검색어가 한국어로 되어 있어야 한다는 점입니다.
-
-3) 중요한 것은 너가 검색어를 json 형태로 내보내야한다는 거야. 예시를 들면 
-{
-    "1" : "검색어 1 내용",
-    "2" : "검색어 2 내용",
-    "3" : "검색어 3 내용",
-    "4" : "검색어 4 내용",
-    "5" : "검색어 5 내용"
-}
-"""
+with open("prompt_keyword.txt") as prompt_file:
+    prompt = prompt_file.read()
 
 def parse_arguments():
     """입력 인자를 파싱하는 함수.
@@ -367,11 +322,6 @@ def getcomments(video_code):
     return video_comment
 
 
-def claude(input_file):
-    response = query_anthropic(input_file)
-    print("response",   response)
-    return response
-
 def generate_youtube_links(search_list):
     linklist = []
     for query in search_list:
@@ -429,26 +379,75 @@ def youtube_search(api_key, search_query):
 
 
 def makevideopair(video_code):
-    origin_meta_data = getmata(video_code)
-    print("meta data 크롤링 완료")
-    origin_comment = getcomments(video_code)
-    print("comments 크롤링 완료")
-    input_prompt = prompt + str(origin_meta_data)
-    claude_response = claude(input_prompt)
-    print("claude 검색어 생성 완료  ")
-    response_data = json.loads(claude_response)
-    result = []
-    # , response_data["2"], response_data["3"], response_data["4"], response_data["5"]]
-    generated_query_keywords = [response_data["1"]]
-    generated_meta_comment_pair_list = []
-    for i in range(len(generated_query_keywords)):
-        output3 = youtube_search(os.getenv('YT_KEY'), generated_query_keywords[i])
-        violate_meta_list = [getmata(str(output3[k]["id"])) for k in range(len(output3))]
-        violate_comment_list = [getcomments(str(output3[k]["id"])) for k in range(len(output3))]
-        print("len(violate_meta_list)",len(violate_meta_list))
+    if not os.path.exists(f"{video_code}.meta"):
+        origin_meta_data = getmata(video_code)
+        print("메타데이터 크롤링 완료")
+            
+        with open(f"{video_code}.meta", "wb") as f:
+            pickle.dump(origin_meta_data, f)
+            
+    else:
+        with open(f"{video_code}.meta", "rb") as f:
+            print("메타데이터 캐시데이터 사용")
+            origin_meta_data = pickle.load(f)
         
-        for j in range(len(violate_meta_list)):
-            generated_meta_comment_pair_one = {"origin_meta": origin_meta_data, "origin_comment": origin_comment, "violate_meta": violate_meta_list[j], "violate_comment": violate_comment_list[j]}
-            generated_meta_comment_pair_list.append(generated_meta_comment_pair_one)
-        result.append(generated_meta_comment_pair_list)
+        
+    if not os.path.exists(f"{video_code}.comment"):
+        origin_comment = getcomments(video_code)
+        print("댓글 크롤링 완료")
+        
+        with open(f"{video_code}.comment", "wb") as f:
+            pickle.dump(origin_comment, f)
+            
+    else:
+        with open(f"{video_code}.comment", "rb") as f:
+            print("댓글 캐시데이터 사용")
+            origin_comment = pickle.load(f)
+        
+        
+    if not os.path.exists(f"{video_code}.llm"):
+        input_prompt = prompt + str(origin_meta_data)
+        response = request_to_gpt35(input_prompt)
+        print("LLM 검색어 생성 완료  ")
+            
+        with open(f"{video_code}.llm", "wb") as f:
+            pickle.dump(response, f)
+            
+    else:
+        with open(f"{video_code}.llm", "rb") as f:
+            print("LLM 검색어 캐시데이터 사용")
+            response = pickle.load(f)
+        
+    print(response)
+    response_data = json.loads(response)
+    result = []
+    
+    generated_query_keywords = [
+        response_data["1"],
+        response_data["2"],
+        response_data["3"],
+        response_data["4"],
+        response_data["5"]
+    ]
+    generated_meta_comment_pair_list = []
+    
+    if not os.path.exists(f"{video_code}.result"):
+        for i in range(len(generated_query_keywords)):
+            output3 = youtube_search(os.getenv('YT_KEY'), generated_query_keywords[i])
+            violate_meta_list = [getmata(str(output3[k]["id"])) for k in range(len(output3))]
+            violate_comment_list = [getcomments(str(output3[k]["id"])) for k in range(len(output3))]
+            print("len(violate_meta_list)",len(violate_meta_list))
+            
+            for j in range(len(violate_meta_list)):
+                generated_meta_comment_pair_one = {"origin_meta": origin_meta_data, "origin_comment": origin_comment, "violate_meta": violate_meta_list[j], "violate_comment": violate_comment_list[j]}
+                generated_meta_comment_pair_list.append(generated_meta_comment_pair_one)
+            result.append(generated_meta_comment_pair_list)
+        
+        with open(f"{video_code}.result", "wb") as f:
+            pickle.dump(result, f)
+    else:
+        with open(f"{video_code}.result", "rb") as f:
+            print("result 캐시데이터 사용")
+            result = pickle.load(f)
+        
     return result
