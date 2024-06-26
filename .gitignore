@@ -5,3 +5,5 @@ prompt_template.txt
 sample_prompt.txt
 ollama
 data
+
+config.py
