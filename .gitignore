@@ -1,5 +1,6 @@
 .env
 hack
+prompt_keyword.txt
 prompt_template.txt
 
 sample_prompt.txt
