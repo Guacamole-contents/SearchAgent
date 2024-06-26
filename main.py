@@ -34,15 +34,18 @@ def main():
             print(prompt)
 
             result_llm = request_to_llm(prompt)
+            print(">>> Result of LLM")
+            print(result_llm)
             json_result = json.loads(result_llm)
 
-            print("json_result:", json_result)
+            print(">>> LLM Query result:", json_result)
+            print(">>> Save result")
             print({"origin_video_name": video_code, "copy_video_name": violate_meta["Original video code"],
                    "is_copy": json_result["is_copy"], "reason": json_result["reason"]})
 
-            save_result_to_db(
-                [{"origin_video_name": video_code, "copy_video_name": violate_meta["Original video code"],
-                 "is_copy": json_result["is_copy"], "reason": json_result["reason"], "search_date": int(datetime.now().timestamp())}])
+            # save_result_to_db(
+            #     [{"origin_video_name": video_code, "copy_video_name": violate_meta["Original video code"],
+            #      "is_copy": json_result["is_copy"], "reason": json_result["reason"], "search_date": int(datetime.now().timestamp())}])
 
 
 if __name__ == '__main__':

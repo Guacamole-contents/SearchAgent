@@ -1,29 +1,66 @@
 
 import argparse
+import pickle
+import time
 import json
 import os
+
 import urllib.parse
+from dotenv import load_dotenv
 from pytube import YouTube
 from googleapiclient.discovery import build
-import pickle
-from dotenv import load_dotenv
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from googleapiclient.errors import HttpError
+
 from tqdm import tqdm
 
+from config import config
 from request_to_llm import request_to_gpt35
-
-import time
 
 load_dotenv()
 
 
 with open("prompt_keyword.txt") as prompt_file:
     prompt = prompt_file.read()
+
+
+def get_youtube_api_key() -> str:
+    """YouTube API Key를 반환하는 함수.
+
+    Returns:
+        str: 현재 사용 가능한 YouTube API Key.
+    """
+
+    for api_key in config.YOUTUBE_API_KEY:
+        service = build('youtube', 'v3', developerKey=api_key)
+        try:
+            # 할당량 확인을 위해 쿼터 엔드포인트 호출
+            # YouTube Data API는 명시적인 할당량 조회 엔드포인트를 제공하지 않으므로,
+            # API 요청을 통해 사용량을 추적해야 합니다.
+
+            # 현재 할당량 상태를 가져오기 위한 간단한 API 호출
+            request = service.videos().list(
+                part='snippet',
+                chart='mostPopular',
+                maxResults=1
+            )
+            response = request.execute()
+
+            # 할당량 정보 출력
+            print(f'>>> API call successful. {api_key}')
+
+            return api_key
+
+        except Exception as e:
+            print(f'!!! API Key {api_key} is not avaliable. ')
+
+    return ""
+
 
 def parse_arguments():
     """입력 인자를 파싱하는 함수.
@@ -54,10 +91,10 @@ def get_video_comments(api_key, video_id: str) -> list:
     comments = []
     api_obj = build('youtube', 'v3', developerKey=api_key)
     response = api_obj.commentThreads().list(
-        part='snippet,replies', videoId=video_id, maxResults=100).execute()
+        part='snippet,replies', videoId=video_id, maxResults=20).execute()
 
     while response:
-        for item in tqdm(response['items']):
+        for item in response['items']:
             try:
                 comment = item['snippet']['topLevelComment']['snippet']
                 comments.append({
@@ -77,12 +114,19 @@ def get_video_comments(api_key, video_id: str) -> list:
                             'likeCount': reply.get('likeCount', 0)
                         })
             except KeyError:
+                print(f"!!! KeyError")
+                print(f">>> {item}")
                 continue
 
         if 'nextPageToken' in response:
-            response = api_obj.commentThreads().list(
-                part='snippet,replies', videoId=video_id,
-                pageToken=response['nextPageToken'], maxResults=100).execute()
+            try:
+                response = api_obj.commentThreads().list(
+                    part='snippet,replies', videoId=video_id,
+                    pageToken=response['nextPageToken'], maxResults=20).execute()
+            except Exception as e:
+                print(f"!!! Error")
+                print(f">>> {e}")
+                print(f">>> {response}")
         else:
             break
 
@@ -254,7 +298,7 @@ def __get_video_info_in_statistics(api_key: str, video_id: str, section: str) ->
 
 def getmata(video_code):
     # YouTube API 접속을 위한 API Key 환경변수 가져오기.
-    youtube_api_key = os.getenv("YT_KEY")
+    youtube_api_key = get_youtube_api_key()
     if youtube_api_key == None:
         print("YouTube API 사용을 위한 키를 환경변수 `YT_KEY`로 지정 후 다시 실행시켜 주세요. ")
         exit(1)
@@ -278,12 +322,13 @@ def getmata(video_code):
         "Original upload date": video_upload_date,
         "Original video code": video_code
     }
-    print("result: ", result)
+    print(">>> Mata Data result: ")
+    print(json.dumps(result, sort_keys=True, indent=4, ensure_ascii=False))
     return result
 
 def getmataandcomments(video_code):
     # YouTube API 접속을 위한 API Key 환경변수 가져오기.
-    youtube_api_key = os.getenv("YT_KEY")
+    youtube_api_key = get_youtube_api_key()
     if youtube_api_key == None:
         print("YouTube API 사용을 위한 키를 환경변수 `YT_KEY`로 지정 후 다시 실행시켜 주세요. ")
         exit(1)
@@ -313,7 +358,7 @@ def getmataandcomments(video_code):
     return new_result
 def getcomments(video_code):
     # YouTube API 접속을 위한 API Key 환경변수 가져오기.
-    youtube_api_key = os.getenv("YT_KEY")
+    youtube_api_key = get_youtube_api_key()
     if youtube_api_key == None:
         print("YouTube API 사용을 위한 키를 환경변수 `YT_KEY`로 지정 후 다시 실행시켜 주세요. ")
         exit(1)
@@ -433,10 +478,13 @@ def makevideopair(video_code):
     
     if not os.path.exists(f"{video_code}.result"):
         for i in range(len(generated_query_keywords)):
-            output3 = youtube_search(os.getenv('YT_KEY'), generated_query_keywords[i])
+            output3 = youtube_search(
+                get_youtube_api_key(), generated_query_keywords[i])
             violate_meta_list = [getmata(str(output3[k]["id"])) for k in range(len(output3))]
             violate_comment_list = [getcomments(str(output3[k]["id"])) for k in range(len(output3))]
-            print("len(violate_meta_list)",len(violate_meta_list))
+            # print("len(violate_meta_list)",len(violate_meta_list))
+            print(">>> violate_meta_list")
+            print(violate_meta_list)
             
             for j in range(len(violate_meta_list)):
                 generated_meta_comment_pair_one = {"origin_meta": origin_meta_data, "origin_comment": origin_comment, "violate_meta": violate_meta_list[j], "violate_comment": violate_comment_list[j]}
