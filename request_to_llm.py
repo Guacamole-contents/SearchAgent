@@ -5,7 +5,7 @@ from anthropic import Anthropic
 
 from config import config
 
-import instructor
+# import instructor
 
 
 def request_to_claude(prompt):
