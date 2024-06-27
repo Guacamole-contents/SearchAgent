@@ -39,6 +39,7 @@ def main():
         print("!!! Model provider mismatch.")
         exit(1)
 
+    # TODO: 해당 부분에서 설정된 모델에 따르도록 수정. (함수 makevideopair 내에서 함수 request_to_llm를 호출하는 부분. )
     list_data_result = makevideopair(video_code)
 
     for data_results in list_data_result:
@@ -53,6 +54,7 @@ def main():
             )
             print(prompt)
 
+            # TODO: 해당 부분에서 설정된 모델에 따르도록 수정.
             result_llm = request_to_llm(prompt)
             print(">>> Result of LLM")
             print(result_llm)

@@ -19,7 +19,7 @@ from googleapiclient.errors import HttpError
 from tqdm import tqdm
 
 from config import config
-from request_to_llm import request_to_gpt3p5
+from request_to_llm import request_to_llm
 
 load_dotenv()
 
@@ -492,7 +492,7 @@ def makevideopair(video_code):
 
     if not os.path.exists(f"{video_code}.llm"):
         input_prompt = PROMPT + str(origin_meta_data)
-        response = request_to_gpt3p5(input_prompt)
+        response = request_to_llm(input_prompt)
         print("LLM 검색어 생성 완료  ")
 
         with open(f"{video_code}.llm", "wb") as f:
