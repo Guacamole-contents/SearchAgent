@@ -30,6 +30,35 @@ def calculate_tokens(prompt: str, completion: str, model: str) -> tuple[int, int
     return (prompt_cost, completion_cost)
 
 
+def validate_model_provider(model: str, provider: str) -> bool:
+    """입력된 모델 제공사와 모델이 서로 맞는지 확인하는 함수. 
+
+    Args:
+        model (str): 사용하고자 하는 모델명. 
+        provider (str): 사용하고자 하는 모델의 제공사.
+
+    Returns:
+        bool: 일치하면 True, 일치하지 않으면 False.
+    """
+    # 지원하는 모델 및 제공사 목록.
+    dict_provider = {
+        "anthropic": ["claude-3-opus-20240229"],
+        "meta": ["meta-llama-3-70b-instruct"],
+        "friendli": ["llama2:70b"],
+        "gpt35": ["gpt-3.5-turbo"],
+    }
+
+    # 제공사가 없는 경우 False 반환.
+    if provider in dict_provider[model]:
+        return False
+
+    # 제공사 내에 모델이 없는 경우 False 반환.
+    if model in dict_provider[provider]:
+        return False
+
+    return True
+
+
 def request_to_claude(prompt):
     model = Anthropic(api_key=config.ANTHROPIC_API_KEY)
     message = model.messages.create(
