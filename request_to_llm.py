@@ -8,7 +8,7 @@ from tokencost import calculate_prompt_cost, calculate_completion_cost
 from config import config
 
 
-def calculate_tokens(prompt: str, completion: str, model: str) -> tuple[int, int]:
+def calculate_tokens(prompt: str, response: str, model: str) -> tuple[int, int]:
     """정해진 모델에 따른 프롬프트와 완성에 따른 비용 계산 함수. 
 
     Args:
@@ -19,10 +19,8 @@ def calculate_tokens(prompt: str, completion: str, model: str) -> tuple[int, int
     Returns:
         tuple[int, int]: 각각 프롬프트의 추론 금액과 완성된 결과의 금액. 
     """
-    prompt_string = "Hello world"
-    response = "How may I assist you today?"
 
-    prompt_cost = calculate_prompt_cost(prompt_string, model)
+    prompt_cost = calculate_prompt_cost(prompt, model)
     completion_cost = calculate_completion_cost(response, model)
     print(f">>> Prompt Cost: ${prompt_cost}")
     print(f">>> completion Cost: ${completion_cost}")
