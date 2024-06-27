@@ -4,10 +4,11 @@ from datetime import datetime
 
 import json
 
+from config import config
 from getmeta import makevideopair
 from generate_prompt import generate_violation_detection_prompt
 from save_result_to_db import save_result_to_db
-from request_to_llm import request_to_llm
+from request_to_llm import request_to_llm, validate_model_provider
 
 
 def main():
@@ -24,6 +25,19 @@ def main():
     args = parser.parse_args()
 
     video_code = args.code
+
+    # config.py의 모델 설정 검증.
+    is_match = validate_model_provider(config.MODEL_KEYWORD_EXTRACTION,
+                                       config.PROVIDER_KEYWORD_EXTRACTION)
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
+
+    is_match = validate_model_provider(config.MODEL_VIOLATION_DETECTION,
+                                       config.PROVIDER_VIOLATION_DETECTION)
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
 
     list_data_result = makevideopair(video_code)
 
