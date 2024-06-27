@@ -491,7 +491,7 @@ def makevideopair(video_code):
             origin_comment = pickle.load(f)
 
     if not os.path.exists(f"{video_code}.llm"):
-        input_prompt = prompt + str(origin_meta_data)
+        input_prompt = PROMPT + str(origin_meta_data)
         response = request_to_gpt35(input_prompt)
         print("LLM 검색어 생성 완료  ")
 
