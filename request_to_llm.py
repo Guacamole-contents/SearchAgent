@@ -3,12 +3,12 @@ from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.chat_models.openai import ChatOpenAI
 from anthropic import Anthropic
 
-from tokencost import calculate_prompt_cost, calculate_completion_cost
+from tokencost import calculate_prompt_cost, calculate_completion_cost, count_string_tokens
 
 from config import config
 
 
-def calculate_tokens(prompt: str, response: str, model: str) -> tuple[int, int]:
+def calculate_tokens(prompt: str, result: str, model: str) -> tuple[float, float, int, int]:
     """정해진 모델에 따른 프롬프트와 완성에 따른 비용 계산 함수. 
 
     Args:
@@ -17,15 +17,18 @@ def calculate_tokens(prompt: str, response: str, model: str) -> tuple[int, int]:
         model (str): 추론시 사용된 모델명. 
 
     Returns:
-        tuple[int, int]: 각각 프롬프트의 추론 금액과 완성된 결과의 금액. 
+        tuple[float, float, int, int]: 프롬프트 가격, 결과 가격, 프롬프트 토큰수, 결과 토큰수
     """
 
-    prompt_cost = calculate_prompt_cost(prompt, model)
-    completion_cost = calculate_completion_cost(response, model)
-    print(f">>> Prompt Cost: ${prompt_cost}")
-    print(f">>> completion Cost: ${completion_cost}")
+    cost_prompt = calculate_prompt_cost(prompt, model)
+    cost_response = calculate_completion_cost(result, model)
+    tokens_prompt = count_string_tokens(prompt, model)
+    tokens_result = count_string_tokens(result, model)
 
-    return (prompt_cost, completion_cost)
+    print(f">>> Prompt Cost: ${cost_prompt} Tokens: {tokens_prompt}")
+    print(f">>> completion Cost: ${cost_response} Tokens: {tokens_result}")
+
+    return (cost_prompt, cost_response, tokens_prompt, tokens_result)
 
 
 def request_to_claude(prompt: str) -> str:
