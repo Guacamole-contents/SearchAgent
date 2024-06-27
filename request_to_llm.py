@@ -1,14 +1,18 @@
+import os
+import pandas as pd
+
 from langchain_community.chat_models.friendli import ChatFriendli
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.chat_models.openai import ChatOpenAI
 from anthropic import Anthropic
 
-from tokencost import calculate_prompt_cost, calculate_completion_cost
+
+from tokencost import calculate_prompt_cost, calculate_completion_cost, count_string_tokens
 
 from config import config
 
 
-def calculate_tokens(prompt: str, response: str, model: str) -> tuple[int, int]:
+def calculate_tokens(prompt: str, result: str, model: str) -> tuple[float, float, int, int]:
     """정해진 모델에 따른 프롬프트와 완성에 따른 비용 계산 함수. 
 
     Args:
@@ -17,15 +21,18 @@ def calculate_tokens(prompt: str, response: str, model: str) -> tuple[int, int]:
         model (str): 추론시 사용된 모델명. 
 
     Returns:
-        tuple[int, int]: 각각 프롬프트의 추론 금액과 완성된 결과의 금액. 
+        tuple[float, float, int, int]: 프롬프트 가격, 결과 가격, 프롬프트 토큰수, 결과 토큰수
     """
 
-    prompt_cost = calculate_prompt_cost(prompt, model)
-    completion_cost = calculate_completion_cost(response, model)
-    print(f">>> Prompt Cost: ${prompt_cost}")
-    print(f">>> completion Cost: ${completion_cost}")
+    cost_prompt = calculate_prompt_cost(prompt, model)
+    cost_response = calculate_completion_cost(result, model)
+    tokens_prompt = count_string_tokens(prompt, model)
+    tokens_result = count_string_tokens(result, model)
 
-    return (prompt_cost, completion_cost)
+    print(f">>> Prompt Cost: ${cost_prompt} Tokens: {tokens_prompt}")
+    print(f">>> completion Cost: ${cost_response} Tokens: {tokens_result}")
+
+    return (cost_prompt, cost_response, tokens_prompt, tokens_result)
 
 
 def validate_model_provider(model: str, provider: str) -> bool:
@@ -57,40 +64,108 @@ def validate_model_provider(model: str, provider: str) -> bool:
     return True
 
 
-def request_to_claude(prompt):
+def request_to_claude(prompt: str) -> str:
+    """Anthropic의 claude 모델에게 prompt 추론 및 결과를 반환하는 함수. 
+
+    Args:
+        prompt (str): 모델에 추론시킬 프롬프트. 
+
+    Returns:
+        str: 프롬프트 추론 후 결과. 
+    """
+
     model = Anthropic(api_key=config.ANTHROPIC_API_KEY)
     message = model.messages.create(
         model="claude-3-opus-20240229",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
-    return message.content[0].text
+    result = message.content[0].text
+
+    return result
 
 
-def request_to_friendli(prompt):
+def request_to_friendli(prompt: str) -> str:
+    """Friendli에서 서비스중인 모델에게 prompt 추론 및 결과를 반환하는 함수. 
+
+    Args:
+        prompt (str): 모델에 추론시킬 프롬프트. 
+
+    Returns:
+        str: 프롬프트 추론 후 결과. 
+    """
+
     model = ChatFriendli(
             model="meta-llama-3-70b-instruct", friendli_token=config.FRIENDLI_TOKEN
     )
-    return model.invoke(prompt).content
+    result = model.invoke(prompt).content
+
+    return result
 
 
-def request_to_ollama(prompt):
+def request_to_ollama(prompt: str) -> str:
+    """Ollama에서 서비스중인 모델에게 prompt 추론 및 결과를 반환하는 함수. 
+
+    Args:
+        prompt (str): 모델에 추론시킬 프롬프트. 
+
+    Returns:
+        str: 프롬프트 추론 후 결과. 
+    """
+
     model = ChatOllama(model="llama3:70b", base_url="http://localhost:7869")
-    return model.invoke(prompt).content
+    result = model.invoke(prompt).content
+
+    return result
 
 
-def request_to_gpt35(prompt):
+def request_to_gpt3p5(prompt: str) -> str:
+    """OpenAI에서 GPT-3.5에게 prompt 추론 및 결과를 반환하는 함수. 
+
+    Args:
+        prompt (str): 모델에 추론시킬 프롬프트. 
+
+    Returns:
+        str: 프롬프트 추론 후 결과. 
+    """
+
     model = ChatOpenAI(
         temperature=0.7,
         max_tokens=2048,
         model="gpt-3.5-turbo",
         api_key=config.OPENAI_GPT_KEY,
     )
-
     result = model.invoke(prompt).content
 
-    return model.invoke(prompt).content
+    return result
 
 
-def request_to_llm(prompt: str):
-    return request_to_gpt35(prompt)
+def request_to_llm(prompt: str, result_file_name: str = "cost_result.csv") -> str:
+    # TODO: 입력에서 모델과 제공사를 받은 후, 이에 따른 모델별 결과를 가져와 반환.
+    result = request_to_gpt3p5(prompt)
+
+    # 모델과 프롬프트 및 결과에 따른 비용 계산 및 저장.
+    # TODO: 기존의 GPT-3.5 기준 계산을, 위의 모델 및 제공사 입력에 따르도록 변경.
+    result_tokens = calculate_tokens(prompt, result, "gpt-3.5-turbo")
+
+    # 결과 CSV으로 저장.
+    dict_to_json = {"prompt": prompt, "result": result,
+                    "model": "gpt-3.5-turbo", "provider": "OpenAI",
+                    "cost_prompt": result_tokens[0], "cost_result": result_tokens[1],
+                    "tokens_prompt": result_tokens[2], "tokens_result": result_tokens[3]}
+    df_cost = pd.DataFrame(dict_to_json, index=[0])
+
+    # 파일이 존재하는지 확인.
+    if os.path.exists(result_file_name):
+        # 파일이 존재하면 내용을 추가
+        existing_df = pd.read_csv(result_file_name)
+        updated_df = pd.concat([existing_df, df_cost], ignore_index=True)
+    else:
+        # 파일이 존재하지 않으면 새 파일을 생성.
+        updated_df = df_cost
+
+    # 결과 파일 저장. 
+    updated_df.to_csv(result_file_name, index=False)
+
+    return result
+  

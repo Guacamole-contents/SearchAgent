@@ -14,6 +14,8 @@ config.py
 *.meta
 *.result
 
+cost_result.csv
+
 # Auto generated. 
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,windows
