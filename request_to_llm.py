@@ -1,3 +1,6 @@
+import os
+import pandas as pd
+
 from langchain_community.chat_models.friendli import ChatFriendli
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.chat_models.openai import ChatOpenAI
@@ -107,5 +110,30 @@ def request_to_gpt3p5(prompt: str) -> str:
     return result
 
 
-def request_to_llm(prompt: str):
-    return request_to_gpt35(prompt)
+def request_to_llm(prompt: str, result_file_name: str = "cost_result.csv") -> str:
+    # TODO: 입력에서 모델과 제공사를 받은 후, 이에 따른 모델별 결과를 가져와 반환.
+    result = request_to_gpt3p5(prompt)
+
+    # 모델과 프롬프트 및 결과에 따른 비용 계산 및 저장.
+    # TODO: 기존의 GPT-3.5 기준 계산을, 위의 모델 및 제공사 입력에 따르도록 변경.
+    result_tokens = calculate_tokens(prompt, result, "gpt-3.5-turbo")
+
+    # 결과 CSV으로 저장.
+    dict_to_json = {"prompt": prompt, "result": result,
+                    "model": "gpt-3.5-turbo", "provider": "OpenAI",
+                    "cost_prompt": result_tokens[0], "cost_result": result_tokens[1],
+                    "tokens_prompt": result_tokens[2], "tokens_result": result_tokens[3]}
+    df_cost = pd.DataFrame(dict_to_json, index=[0])
+
+    # 파일이 존재하는지 확인.
+    if os.path.exists(result_file_name):
+        # 파일이 존재하면 내용을 추가
+        existing_df = pd.read_csv(result_file_name)
+        updated_df = pd.concat([existing_df, df_cost], ignore_index=True)
+    else:
+        # 파일이 존재하지 않으면 새 파일을 생성.
+        updated_df = df_cost
+
+    updated_df.to_csv(result_file_name, index=False)
+
+    return result
