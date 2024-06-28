@@ -71,8 +71,9 @@ def main():
                 config.PROVIDER_VIOLATION_DETECTION,
             )
             print(">>> Result of LLM")
-            print(result_llm)
-            json_result = json.loads(result_llm)
+            result_preprocessed = "{" + result_llm.split("{")[1].split("}")[0] + "}"
+            print(result_preprocessed)
+            json_result = json.loads(result_preprocessed)
 
             print(">>> LLM Query result:", json_result)
             print(">>> Save result")
