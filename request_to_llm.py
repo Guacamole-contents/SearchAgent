@@ -166,23 +166,24 @@ def request_to_llm(
         str: 입력된 모델에 대해 프롬프트를 추론한 결과.
     """
 
+    # 제공사와 모델간의 일치 여부 확인.
     if not validate_model_provider(model, provider):
         raise ValueError("Invalid model or provider")
 
+    # 제공사와 모델에 따른 LLM 서비스 이용.
     if provider == "anthropic":
-        result = request_to_claude(prompt)
+        result = request_to_anthropic(model, prompt)
     elif provider == "friendli":
-        result = request_to_friendli(prompt)
+        result = request_to_friendli(model, prompt)
     elif provider == "ollama":
-        result = request_to_ollama(prompt)
+        result = request_to_ollama(model, prompt)
     elif provider == "openai":
-        result = request_to_gpt3p5(prompt)
+        result = request_to_openai(model, prompt)
     else:
         raise ValueError("Unsupported provider")
 
     # 모델과 프롬프트 및 결과에 따른 비용 계산 및 저장.
-    # TODO: 기존의 GPT-3.5 기준 계산을, 위의 모델 및 제공사 입력에 따르도록 변경.
-    result_tokens = calculate_tokens(prompt, result, "gpt-3.5-turbo")
+    result_tokens = calculate_tokens(prompt, result, model)
 
     # 결과 CSV으로 저장.
     dict_to_json = {
