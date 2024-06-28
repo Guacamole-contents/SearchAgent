@@ -73,7 +73,7 @@ def validate_model_provider(model: str, provider: str) -> bool:
     return True
 
 
-def request_to_claude(prompt: str) -> str:
+def request_to_anthropic(model_name: str, prompt: str) -> str:
     """Anthropic의 claude 모델에게 prompt 추론 및 결과를 반환하는 함수.
 
     Args:
@@ -85,7 +85,7 @@ def request_to_claude(prompt: str) -> str:
 
     model = Anthropic(api_key=config.ANTHROPIC_API_KEY)
     message = model.messages.create(
-        model="claude-3-opus-20240229",
+        model=model_name,
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -94,7 +94,7 @@ def request_to_claude(prompt: str) -> str:
     return result
 
 
-def request_to_friendli(prompt: str) -> str:
+def request_to_friendli(model_name: str, prompt: str) -> str:
     """Friendli에서 서비스중인 모델에게 prompt 추론 및 결과를 반환하는 함수.
 
     Args:
@@ -104,15 +104,13 @@ def request_to_friendli(prompt: str) -> str:
         str: 프롬프트 추론 후 결과.
     """
 
-    model = ChatFriendli(
-        model="meta-llama-3-70b-instruct", friendli_token=config.FRIENDLI_TOKEN
-    )
+    model = ChatFriendli(model=model_name, friendli_token=config.FRIENDLI_TOKEN)
     result = model.invoke(prompt).content
 
     return result
 
 
-def request_to_ollama(prompt: str) -> str:
+def request_to_ollama(model_name: str, prompt: str) -> str:
     """Ollama에서 서비스중인 모델에게 prompt 추론 및 결과를 반환하는 함수.
 
     Args:
@@ -122,13 +120,13 @@ def request_to_ollama(prompt: str) -> str:
         str: 프롬프트 추론 후 결과.
     """
 
-    model = ChatOllama(model="llama3:70b", base_url="http://localhost:7869")
+    model = ChatOllama(model=model_name, base_url="http://localhost:7869")
     result = model.invoke(prompt).content
 
     return result
 
 
-def request_to_gpt3p5(prompt: str) -> str:
+def request_to_openai(model_name: str, prompt: str) -> str:
     """OpenAI에서 GPT-3.5에게 prompt 추론 및 결과를 반환하는 함수.
 
     Args:
@@ -141,7 +139,7 @@ def request_to_gpt3p5(prompt: str) -> str:
     model = ChatOpenAI(
         temperature=0.7,
         max_tokens=2048,
-        model="gpt-3.5-turbo",
+        model=model_name,
         api_key=config.OPENAI_GPT_KEY,
     )
     result = model.invoke(prompt).content
