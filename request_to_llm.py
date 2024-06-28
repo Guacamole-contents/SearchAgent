@@ -1,4 +1,5 @@
 import os
+import time
 import pandas as pd
 
 from langchain_community.chat_models.friendli import ChatFriendli
@@ -195,6 +196,7 @@ def request_to_llm(
         "cost_result": result_tokens[1],
         "tokens_prompt": result_tokens[2],
         "tokens_result": result_tokens[3],
+        "timestamp": time.strftime("%c", time.localtime()),
     }
     df_cost = pd.DataFrame(dict_to_json, index=[0])
 

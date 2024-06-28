@@ -1,4 +1,5 @@
 import argparse
+from pprint import pprint
 
 from datetime import datetime
 
@@ -23,6 +24,12 @@ def main():
         help="YouTube의 영상코드. (Example: UP2RFQCszdk)",
     )
     args = parser.parse_args()
+
+    print(">>> Input arguments")
+    pprint(args)
+    print()
+    print(">>> Config arguments")
+    pprint(config)
 
     video_code = args.code
 
