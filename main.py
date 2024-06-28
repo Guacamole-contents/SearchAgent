@@ -27,14 +27,16 @@ def main():
     video_code = args.code
 
     # config.py의 모델 설정 검증.
-    is_match = validate_model_provider(config.MODEL_KEYWORD_EXTRACTION,
-                                       config.PROVIDER_KEYWORD_EXTRACTION)
+    is_match = validate_model_provider(
+        config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
+    )
     if not is_match:
         print("!!! Model provider mismatch.")
         exit(1)
 
-    is_match = validate_model_provider(config.MODEL_VIOLATION_DETECTION,
-                                       config.PROVIDER_VIOLATION_DETECTION)
+    is_match = validate_model_provider(
+        config.MODEL_VIOLATION_DETECTION, config.PROVIDER_VIOLATION_DETECTION
+    )
     if not is_match:
         print("!!! Model provider mismatch.")
         exit(1)
@@ -55,7 +57,11 @@ def main():
             print(prompt)
 
             # TODO: 해당 부분에서 설정된 모델에 따르도록 수정.
-            result_llm = request_to_llm(prompt)
+            result_llm = request_to_llm(
+                prompt,
+                config.MODEL_VIOLATION_DETECTION,
+                config.PROVIDER_VIOLATION_DETECTION,
+            )
             print(">>> Result of LLM")
             print(result_llm)
             json_result = json.loads(result_llm)
