@@ -516,8 +516,15 @@ def make_video_pair(video_code: str, model: str, provider: str) -> List:
             print("LLM 검색어 캐시데이터 사용")
             response = pickle.load(f)
 
+    result_preprocessed = (
+        "{" + response.split("{")[1].split("}")[0] + "}"
+        if response[0] != "{"
+        else response
+    )
+
     print(response)
-    response_data = json.loads(response)
+    print(result_preprocessed)
+    response_data = json.loads(result_preprocessed)
     result = []
 
     generated_query_keywords = [
