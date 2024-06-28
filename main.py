@@ -5,7 +5,7 @@ from datetime import datetime
 import json
 
 from config import config
-from getmeta import makevideopair
+from getmeta import make_video_pair
 from generate_prompt import generate_violation_detection_prompt
 from save_result_to_db import save_result_to_db
 from request_to_llm import request_to_llm, validate_model_provider
@@ -41,8 +41,9 @@ def main():
         print("!!! Model provider mismatch.")
         exit(1)
 
-    # TODO: 해당 부분에서 설정된 모델에 따르도록 수정. (함수 makevideopair 내에서 함수 request_to_llm를 호출하는 부분. )
-    list_data_result = makevideopair(video_code)
+    list_data_result = make_video_pair(
+        video_code, config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
+    )
 
     for data_results in list_data_result:
         for data in data_results:
