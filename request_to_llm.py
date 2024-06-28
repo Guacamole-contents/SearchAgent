@@ -152,7 +152,22 @@ def request_to_gpt3p5(prompt: str) -> str:
 def request_to_llm(
     prompt: str, model: str, provider: str, result_file_name: str = "cost_result.csv"
 ) -> str:
-    """입력된 모델과 제공사에 따라 prompt를 추론하고 결과를 반환하는 함수."""
+    """입력된 모델과 제공사에 따라 prompt를 추론하고 결과를 반환하는 함수.
+
+    Args:
+        prompt (str): 실행시키기 위한 프롬프트.
+        model (str): 제공사에서 제공하는 모델명.
+        provider (str): 모델이 속한 제공사. (anthropic, friendli, ollama, openai)
+        result_file_name (str, optional): 비용 결과가 저장될 파일명. Defaults to "cost_result.csv".
+
+    Raises:
+        ValueError: 제공사와 모델이 맞지 않는 경우 발생.
+        ValueError: 지원하지 않는 제공사인 경우 발생.
+
+    Returns:
+        str: 입력된 모델에 대해 프롬프트를 추론한 결과.
+    """
+
     if not validate_model_provider(model, provider):
         raise ValueError("Invalid model or provider")
 
