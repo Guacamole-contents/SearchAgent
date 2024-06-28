@@ -7,11 +7,11 @@ from langchain_community.chat_models.openai import ChatOpenAI
 from anthropic import Anthropic
 
 
-# from tokencost import (
-#     calculate_prompt_cost,
-#     calculate_completion_cost,
-#     count_string_tokens,
-# )
+from tokencost import (
+    calculate_prompt_cost,
+    calculate_completion_cost,
+    count_string_tokens,
+)
 
 from config import config
 
