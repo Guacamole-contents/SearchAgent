@@ -57,10 +57,20 @@ def validate_model_provider(model: str, provider: str) -> bool:
     """
     # 지원하는 모델 및 제공사 목록.
     dict_provider = {
-        "anthropic": ["claude-3-opus-20240229"],
+        "anthropic": [
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+        ],
         "meta": ["meta-llama-3-70b-instruct"],
         "friendli": ["llama2:70b"],
-        "openai": ["gpt-3.5-turbo"],
+        "openai": [
+            "gpt-3.5-turbo",
+            "gpt-4o",
+            "gpt-4o-2024-05-13",
+            "gpt-4-turbo",
+            "gpt-4",
+        ],
     }
     print(f"model: {model}, provider: {provider}")
     # 제공사가 없는 경우 False 반환.
