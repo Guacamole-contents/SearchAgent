@@ -18,8 +18,10 @@ from googleapiclient.errors import HttpError
 
 from tqdm import tqdm
 
+from typing import List
+
 from config import config
-from request_to_llm import request_to_gpt35
+from request_to_llm import request_to_llm
 
 load_dotenv()
 
@@ -465,7 +467,18 @@ def youtube_search(api_key, search_query):
     return videos
 
 
-def makevideopair(video_code):
+def make_video_pair(video_code: str, model: str, provider: str) -> List:
+    """입력된 비디오에 대해, 후보 위반영상을 반환하는 함수.
+
+    Args:
+        video_code (str): YouTube video code.
+        model (str): 키워드 추출시 사용될 모델명.
+        provider (str): 모델의 제공사.
+
+    Returns:
+        List: 후보 위반영상 리스트.
+    """
+
     if not os.path.exists(f"{video_code}.meta"):
         origin_meta_data = getmata(video_code)
         print("메타데이터 크롤링 완료")
@@ -492,7 +505,7 @@ def makevideopair(video_code):
 
     if not os.path.exists(f"{video_code}.llm"):
         input_prompt = PROMPT + str(origin_meta_data)
-        response = request_to_gpt35(input_prompt)
+        response = request_to_llm(input_prompt, model, provider)
         print("LLM 검색어 생성 완료  ")
 
         with open(f"{video_code}.llm", "wb") as f:
@@ -503,8 +516,15 @@ def makevideopair(video_code):
             print("LLM 검색어 캐시데이터 사용")
             response = pickle.load(f)
 
+    result_preprocessed = (
+        "{" + response.split("{")[1].split("}")[0] + "}"
+        if response[0] != "{"
+        else response
+    )
+
     print(response)
-    response_data = json.loads(response)
+    print(result_preprocessed)
+    response_data = json.loads(result_preprocessed)
     result = []
 
     generated_query_keywords = [

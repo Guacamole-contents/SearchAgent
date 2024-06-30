@@ -1,13 +1,15 @@
 import argparse
+from pprint import pprint
 
 from datetime import datetime
 
 import json
 
-from getmeta import makevideopair
+from config import config
+from getmeta import make_video_pair
 from generate_prompt import generate_violation_detection_prompt
 from save_result_to_db import save_result_to_db
-from request_to_llm import request_to_llm
+from request_to_llm import request_to_llm, validate_model_provider
 
 
 def main():
@@ -23,9 +25,32 @@ def main():
     )
     args = parser.parse_args()
 
+    print(">>> Input arguments")
+    pprint(args)
+    print()
+    print(">>> Config arguments")
+    pprint(config)
+
     video_code = args.code
 
-    list_data_result = makevideopair(video_code)
+    # config.py의 모델 설정 검증.
+    is_match = validate_model_provider(
+        config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
+    )
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
+
+    is_match = validate_model_provider(
+        config.MODEL_VIOLATION_DETECTION, config.PROVIDER_VIOLATION_DETECTION
+    )
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
+
+    list_data_result = make_video_pair(
+        video_code, config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
+    )
 
     for data_results in list_data_result:
         for data in data_results:
@@ -39,10 +64,16 @@ def main():
             )
             print(prompt)
 
-            result_llm = request_to_llm(prompt)
+            # TODO: 해당 부분에서 설정된 모델에 따르도록 수정.
+            result_llm = request_to_llm(
+                prompt,
+                config.MODEL_VIOLATION_DETECTION,
+                config.PROVIDER_VIOLATION_DETECTION,
+            )
             print(">>> Result of LLM")
-            print(result_llm)
-            json_result = json.loads(result_llm)
+            result_preprocessed = "{" + result_llm.split("{")[1].split("}")[0] + "}"
+            print(result_preprocessed)
+            json_result = json.loads(result_preprocessed)
 
             print(">>> LLM Query result:", json_result)
             print(">>> Save result")
