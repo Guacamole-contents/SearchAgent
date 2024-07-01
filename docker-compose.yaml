@@ -1,0 +1,76 @@
+services:
+    mongodb:
+        image: mongo
+        container_name: mongodb
+        ports:
+            - 27017:27017
+        env_file: .env
+        volumes:
+            - ./data/db:/data/db
+            - ./data/initdb.d:/docker-entrypoint-initdb.d:ro
+        networks:
+            - search-agent-net
+        restart: always
+        hostname: mongodb
+        command: --auth
+        
+    mongo-express:
+        image: mongo-express
+        container_name: mongo-express
+        restart: always
+        ports:
+            - 8081:8081
+        env_file: .env
+        networks:
+            - search-agent-net
+        extra_hosts:
+            - host.docker.internal:host-gateway
+        depends_on:
+            - mongodb
+    ollama:
+        volumes:
+            - ./ollama/ollama:/root/.ollama
+            - ./run-ollama.sh:/docker-entrypoint-initdb.d/run-ollama.sh
+        container_name: ollama
+        pull_policy: always
+        tty: true
+        restart: unless-stopped
+        image: ollama/ollama:latest
+        ports:
+            - 7869:11434
+        environment:
+            - OLLAMA_KEEP_ALIVE=24h
+        networks:
+            - search-agent-net
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - driver: nvidia
+                          count: 2
+                          capabilities: [gpu]
+    ollama-webui:
+        image: ghcr.io/open-webui/open-webui:main
+        container_name: ollama-webui
+        volumes:
+            - ./ollama/ollama-webui:/app/backend/data
+        depends_on:
+            - ollama
+        ports:
+            - 8080:8080
+        environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
+            - OLLAMA_BASE_URLS=http://host.docker.internal:7869 #comma separated ollama hosts
+            - ENV=dev
+            - WEBUI_AUTH=False
+            - WEBUI_NAME=Guacamole AI
+            - WEBUI_URL=http://localhost:8080
+            - WEBUI_SECRET_KEY=23jKqWUf!8g
+        extra_hosts:
+            - host.docker.internal:host-gateway
+        restart: unless-stopped
+        networks:
+            - search-agent-net
+
+networks:
+    search-agent-net:
+        external: false
