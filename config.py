@@ -37,4 +37,10 @@ class Config:
         ],
     }
 
+    # API에서 발급할때 사용되는 비밀키, 알고리즘 그리고 사용가능 시간.
+    JWT_SECRET_KEY = "TYPE_YOUR_SECRET_KEY"
+    JWT_ALGORITHM = "HS256"
+    JWT_EXPRIE_MINUTES = 24 * 60
+
+
 config = Config()

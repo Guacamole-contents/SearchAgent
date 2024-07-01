@@ -1,52 +1,35 @@
+from argparse import Namespace
 import argparse
+
 from pprint import pprint
+from typing import List, Union
 
 from datetime import datetime
 
 import json
 
-from config import config
+from config import config, Config
 from getmeta import make_video_pair
 from generate_prompt import generate_violation_detection_prompt
 from save_result_to_db import save_result_to_db
 from request_to_llm import request_to_llm, validate_model_provider
 
+from fastapi import FastAPI
 
-def main():
-    # 입력 인자값 설정.
-    parser = argparse.ArgumentParser(
-        description="YouTube 영상의 코드를 이용하여 위반 영상을 찾아 DB에 저장합니다. "
-    )
-    parser.add_argument(
-        "--code",
-        metavar="c",
-        type=str,
-        help="YouTube의 영상코드. (Example: UP2RFQCszdk)",
-    )
-    args = parser.parse_args()
 
-    print(">>> Input arguments")
-    pprint(args)
-    print()
-    print(">>> Config arguments")
-    pprint(config)
+def __run_model(args: Namespace, config: Config) -> List:
+    """실행시 입력값과 설정 파일 정의에 따른 전체 결과를 반환하는 함수.
 
+    Args:
+        args (Namespace): 터미널 입력시 참조할 변수들.
+        config (Config): 설정 파일에 정의된 변수들.
+
+    Returns:
+        List: 최종 결과의 리스트.
+    """
+
+    list_result = []
     video_code = args.code
-
-    # config.py의 모델 설정 검증.
-    is_match = validate_model_provider(
-        config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
-    )
-    if not is_match:
-        print("!!! Model provider mismatch.")
-        exit(1)
-
-    is_match = validate_model_provider(
-        config.MODEL_VIOLATION_DETECTION, config.PROVIDER_VIOLATION_DETECTION
-    )
-    if not is_match:
-        print("!!! Model provider mismatch.")
-        exit(1)
 
     list_data_result = make_video_pair(
         video_code, config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
@@ -86,10 +69,65 @@ def main():
                 }
             )
 
+            list_result.append(result_preprocessed)
+            # TODO: 추후 DB insertion 작업 필요.
             # save_result_to_db(
             #     [{"origin_video_name": video_code, "copy_video_name": violate_meta["Original video code"],
             #      "is_copy": json_result["is_copy"], "reason": json_result["reason"], "search_date": int(datetime.now().timestamp())}])
 
+    return list_result
 
-if __name__ == "__main__":
-    main()
+
+def __check_config():
+    """설정 파일을 검증하는 함수."""
+    print(">>> Config arguments")
+    pprint(config)
+
+    # config.py의 모델 설정 검증.
+    is_match = validate_model_provider(
+        config.MODEL_KEYWORD_EXTRACTION, config.PROVIDER_KEYWORD_EXTRACTION
+    )
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
+
+    is_match = validate_model_provider(
+        config.MODEL_VIOLATION_DETECTION, config.PROVIDER_VIOLATION_DETECTION
+    )
+    if not is_match:
+        print("!!! Model provider mismatch.")
+        exit(1)
+
+
+# 설정 유효성 확인 후 HTTP 서버 실행.
+__check_config()
+app = FastAPI()
+
+
+@app.get("/v1/worker/")
+def run(v: Union[str, None]):
+    # TODO: 인자 v를 받아 실제 동작 처리.
+    #
+    # 동작 실행 전, worker 사용 가능 여부 확인.
+    # 모든 worker가 소진된 경우 사용 불가 에러 처리.
+    # 실행에 따른 worker 관리가 되어야함.
+    #
+    # 해당 기능은 JWT 토큰 발행 여부 확인 필요.
+    #
+    # 추론시 함수 `__run_model` 사용.
+    return {"v": v}
+
+
+@app.get("/v1/worker/status")
+def health():
+    # TODO: 현재 사용 가능한 worker 갯수와 사용 가능 여부 통보.
+    # 해당 기능은 JWT 토큰 확인 필요 없음.
+    return {"is_avaiable": True, "available_workers": 5}
+
+
+@app.get("/v1/auth")
+def auth():
+    # TODO: 접근 가능 PW 확인 후 JWT 토큰 생성.
+    # PW는 `config.py`에 기록된 `PASSWORD`를 이용.
+
+    return {"is_avaiable": True}
