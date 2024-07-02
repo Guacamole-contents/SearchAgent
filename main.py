@@ -99,6 +99,14 @@ def __check_config():
         exit(1)
 
 
+def get_available_worker_num():
+    # TODO: 사용 가능한 워커의 갯수를 반환하도록 생성.
+    # 아래의 변수(config.MAX_WORKER)와 queue의 동작중인 worker를 계산하여 반환.
+    max_worker = config.MAX_WORKER
+
+    return max_worker
+
+
 # 설정 유효성 확인 후 HTTP 서버 실행.
 __check_config()
 app = FastAPI()

@@ -42,5 +42,8 @@ class Config:
     JWT_ALGORITHM = "HS256"
     JWT_EXPRIE_MINUTES = 24 * 60
 
+    # Worker에 대한 설정.
+    MAX_WORKER = 5
+
 
 config = Config()
