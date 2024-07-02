@@ -203,7 +203,9 @@ app = FastAPI()
 
 
 @app.get("/v1/worker/")
-def run(v: Union[str, None]):
+def run(
+    v: Union[str, None], current_agent: Annotated[Agent, Depends(get_current_agent)]
+):
     # TODO: 인자 v를 받아 실제 동작 처리.
     #
     # 동작 실행 전, worker 사용 가능 여부 확인.
