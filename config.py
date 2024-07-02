@@ -42,5 +42,9 @@ class Config:
     JWT_ALGORITHM = "HS256"
     JWT_EXPRIE_MINUTES = 24 * 60
 
+    # Agent 이름과 비밀번호.
+    AGENT_NAME: str = "agent-01"
+    AGENT_PASSWORD: str = "TYPE_AGENT_PASSWD"
+
 
 config = Config()
