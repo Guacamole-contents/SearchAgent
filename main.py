@@ -2,11 +2,14 @@ from argparse import Namespace
 import argparse
 
 from pprint import pprint
-from typing import List, Union
+from typing import List, Union, Annotated
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import json
+
+import jwt
+from pydantic import BaseModel
 
 from config import config, Config
 from getmeta import make_video_pair
@@ -14,7 +17,13 @@ from generate_prompt import generate_violation_detection_prompt
 from save_result_to_db import save_result_to_db
 from request_to_llm import request_to_llm, validate_model_provider
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 def __run_model(args: Namespace, config: Config) -> List:
@@ -99,6 +108,27 @@ def __check_config():
         exit(1)
 
 
+def create_access_token(data: dict, expires_delta: timedelta) -> str:
+    """입력받은 데이터와 만료 날짜를 이용하여 JWT 토큰을 발행하는 함수.
+
+    Args:
+        data (dict): JWT 토큰 발행 시 들어갈 데이터.
+        expires_delta (timedelta): 만료 기한.
+
+    Returns:
+        str: 생성된 JWT.
+    """
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + expires_delta
+
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode, config.JWT_SECRET_KEY, algorithm=config.JWT_ALGORITHM
+    )
+
+    return encoded_jwt
+
+
 # 설정 유효성 확인 후 HTTP 서버 실행.
 __check_config()
 app = FastAPI()
@@ -125,9 +155,36 @@ def health():
     return {"is_avaiable": True, "available_workers": 5}
 
 
-@app.get("/v1/auth")
-def auth():
-    # TODO: 접근 가능 PW 확인 후 JWT 토큰 생성.
-    # PW는 `config.py`에 기록된 `PASSWORD`를 이용.
+@app.post("/v1/agent/auth")
+def auth(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]) -> Token:
+    """사용자 인증을 위한 API 함수.
 
-    return {"is_avaiable": True}
+    Args:
+        form_data (Annotated[OAuth2PasswordRequestForm, Depends): 사용자 요청 데이터.
+
+    Raises:
+        HTTPException: 로그인 실패시 발생.
+
+    Returns:
+        Token: 로그인 성공시 발행된 JWT 토큰.
+    """
+
+    # 입력된 사용자 정보.
+    passwd = form_data.password
+    agent_name = form_data.username
+
+    # 입력된 정보 유효성 확인.
+    if passwd != config.AGENT_PASSWORD or agent_name != config.AGENT_NAME:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect Agent ID or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 토큰 발행.
+    date_access_token = timedelta(minutes=config.JWT_EXPRIE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": config.AGENT_NAME}, expires_delta=date_access_token
+    )
+
+    return Token(access_token=access_token, token_type="bearer")
